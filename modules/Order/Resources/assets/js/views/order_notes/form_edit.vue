@@ -136,7 +136,7 @@
                                 <div class="form-group">
                                     <label class="control-label">Datos adicionales</label>
                                 </div>
-                                
+
                                 <table class="table table-responsive table-bordered">
                                     <thead>
                                         <tr width="100%">
@@ -153,7 +153,7 @@
                                                 <div class="form-group mb-2 mr-2">
 
                                                     <el-input v-model="row.title"></el-input>
-                                                    
+
                                                     <template v-if="errors[`additional_data.${index}.title`]">
                                                         <div class="form-group" :class="{'has-danger': errors[`additional_data.${index}.title`]}">
                                                             <small class="form-control-feedback" v-text="errors[`additional_data.${index}.title`][0]"></small>
@@ -163,9 +163,9 @@
                                             </td>
                                             <td>
                                                 <div class="form-group mb-2 mr-2">
-                                                    
+
                                                     <el-input v-model="row.description"></el-input>
-                                                    
+
                                                     <template v-if="errors[`additional_data.${index}.description`]">
                                                         <div class="form-group" :class="{'has-danger': errors[`additional_data.${index}.description`]}">
                                                             <small class="form-control-feedback" v-text="errors[`additional_data.${index}.description`][0]"></small>
@@ -184,7 +184,7 @@
                                 </table>
 
                             </div>
-                            
+
                         </div>
 
                         <div class="row mt-2">
@@ -223,7 +223,9 @@
                                                 <!--<td class="text-right">{{ currency_type.symbol }} {{ row.total_charge }}</td>-->
                                                 <td class="text-center">{{currency_type.symbol}} {{row.total}}</td>
                                                 <td class="text-center">
-
+                                                    <template>
+                                                        <button type="button" class="btn waves-effect waves-light btn-xs btn-primary" @click.prevent="clickEditItem(row, index)"><span style="font-size: 10px;">✎</span></button>
+                                                    </template>
                                                     <template v-if="row.id">
                                                         <button type="button" class="btn waves-effect waves-light btn-xs btn-danger" @click.prevent="clickDeleteONItem(row.id, index)">x</button>
                                                     </template>
@@ -274,6 +276,7 @@
         </div>
 
         <order-note-form-item
+            :recordItem="recordItem"
             :configuration="configuration"
             :currency-type-id-active="form.currency_type_id"
             :exchange-rate-sale="form.exchange_rate_sale"
@@ -342,7 +345,8 @@
                 orderNoteNewId: null,
                 payment_method_types: [],
                 activePanel: 0,
-                loading_search:false
+                loading_search:false,
+                recordItem: null
             }
         },
         async created() {
@@ -375,8 +379,13 @@
             });
 
         },
-        methods: 
+        methods:
         {
+            clickEditItem(row, index) {
+                row.aux_index= index
+                this.recordItem = row
+                this.showDialogAddItem = true
+            },
             clickAddAdditionalData()
             {
                 this.form.additional_data.push({
@@ -603,7 +612,14 @@
                 this.customers = this.all_customers
             },
             addRow(row) {
-                this.form.items.push(JSON.parse(JSON.stringify(row)));
+                if (this.recordItem) {
+                    this.form.items[this.recordItem.aux_index] = row
+                    this.form.items[this.recordItem.aux_index].id = this.recordItem.record_id
+                    this.form.items[this.recordItem.aux_index].record_id = this.recordItem.record_id
+                    this.recordItem = null
+                } else {
+                    this.form.items.push(JSON.parse(JSON.stringify(row)));
+                }
 
                 this.calculateTotal();
             },

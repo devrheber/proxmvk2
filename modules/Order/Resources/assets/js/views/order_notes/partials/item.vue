@@ -419,7 +419,7 @@
                                class="add form-control btn btn-primary"
                                native-type="submit"
                                type="primary">
-                        Agregar
+                        {{ titleAction }}
                     </el-button>
                 </div>
             </div>
@@ -433,7 +433,7 @@
                 <el-button v-if="form.item_id"
                            class="add"
                            native-type="submit"
-                           type="primary">Agregar
+                           type="primary">{{ titleAction }}
                 </el-button>
             </div>
         </form>
@@ -493,7 +493,8 @@ export default {
         'exchangeRateSale',
         'typeUser',
         'configuration',
-        'percentageIgv'
+        'percentageIgv',
+        'recordItem'
     ],
     components: {ItemForm, WarehousesDetail, LotsGroup, SelectLotsForm, 'vue-ckeditor': VueCkeditor.component},
 
@@ -540,7 +541,6 @@ export default {
             readonly_total: 0,
         }
     },
-
     created() {
         this.loadConfiguration()
         this.$store.commit('setConfiguration', this.configuration)
@@ -620,18 +620,18 @@ export default {
         ...mapActions([
             'loadConfiguration',
         ]),
-        hasAttributes() {
-            if (
-                this.form.item !== undefined &&
-                this.form.item.attributes !== undefined &&
-                this.form.item.attributes !== null &&
-                this.form.item.attributes.length > 0
-            ) {
-                return true
-            }
-
-            return false;
-        },
+        // hasAttributes() {
+        //     if (
+        //         this.form.item !== undefined &&
+        //         this.form.item.attributes !== undefined &&
+        //         this.form.item.attributes !== null &&
+        //         this.form.item.attributes.length > 0
+        //     ) {
+        //         return true
+        //     }
+        //
+        //     return false;
+        // },
         ItemSlotTooltipView(item) {
             return ItemSlotTooltip(item);
         },
@@ -684,9 +684,9 @@ export default {
         changeValidateQuantity(event) {
             this.calculateTotal()
         },
-        getMinQuantity() {
-            return 0.01
-        },
+        // getMinQuantity() {
+        //     return 0.01
+        // },
         setMinQuantity() {
             this.form.quantity = this.getMinQuantity()
         },
@@ -792,7 +792,6 @@ export default {
         // },
         initForm() {
             this.errors = {};
-
             this.form = {
                 // category_id: [1],
                 // edit: false,
@@ -836,10 +835,8 @@ export default {
         // initializeFields() {
         //     this.form.affectation_igv_type_id = this.affectation_igv_types[0].id
         // },
-        create() {
+        async create() {
             /* Migrado de resources/js/views/tenant/sale_notes/partials/item.vue*/
-            /*
-
             this.titleDialog = (this.recordItem) ? ' Editar Producto o Servicio' : ' Agregar Producto o Servicio';
             this.titleAction = (this.recordItem) ? ' Editar' : ' Agregar';
             if(this.operation_types !== undefined) {
@@ -850,9 +847,10 @@ export default {
             }
 
             if (this.recordItem) {
+                // this.form = this.recordItem
                 await this.reloadDataItems(this.recordItem.item_id)
                 this.form.item_id = await this.recordItem.item_id
-                await this.changeItem()
+                // await this.changeItem()
                 this.form.quantity = this.recordItem.quantity
                 this.form.unit_price_value = this.recordItem.input_unit_price_value
                 this.form.has_plastic_bag_taxes = (this.recordItem.total_plastic_bag_taxes > 0) ? true : false
@@ -890,12 +888,12 @@ export default {
                         this.form.affectation_igv_type_id = this.recordItem.item.original_affectation_igv_type_id
                     }
                 }
-                this.calculateQuantity()
+                // this.calculateQuantity()
             } else {
                 this.isUpdateWarehouseId = null
             }
+            this.$refs.selectSearchNormal.$el.getElementsByTagName('input')[0].focus()
 
-            */
             //     this.initializeFields()
         },
         async regularizeLots() {
@@ -996,7 +994,7 @@ export default {
             this.lots = this.form.item.lots;
             this.form.has_igv = this.form.item.has_igv;
             this.form.affectation_igv_type_id = this.form.item.sale_affectation_igv_type_id;
-            this.form.quantity = 1;
+            this.form.quantity = this.recordItem.quantity ? this.recordItem.quantity : 1;
             this.item_unit_types = this.form.item.item_unit_types;
             (this.item_unit_types.length > 0) ? this.has_list_prices = true : this.has_list_prices = false;
             this.form.lots_group = this.form.item.lots_group
@@ -1047,7 +1045,6 @@ export default {
 
         calculateTotal() {
             this.readonly_total = _.round((this.form.quantity * this.form.unit_price_value), 4)
-            console.log(this.readonly_total)
         },
         calculateQuantity() {
             if (this.form.item.calculate_quantity) {
@@ -1097,7 +1094,6 @@ export default {
         cleanItems() {
             this.items = []
             this.$refs.selectBarcode.$el.getElementsByTagName('input')[0].focus()
-            // console.log("add cart barcode")
         },
         validateTotalItem() {
 
@@ -1194,29 +1190,29 @@ export default {
             this.$refs.selectSearchNormal.$el.getElementsByTagName('input')[0].focus()
 
         },
-        validateQuantity() {
-
-            if (!this.form.quantity) {
-                this.setMinQuantity()
-            }
-
-            if (isNaN(Number(this.form.quantity))) {
-                this.setMinQuantity()
-            }
-
-            if (typeof parseFloat(this.form.quantity) !== 'number') {
-                this.setMinQuantity()
-            }
-
-            if (this.form.quantity <= this.getMinQuantity()) {
-                this.setMinQuantity()
-            }
-
-            this.calculateTotal()
-        },
-        setMinQuantity() {
-            this.form.quantity = this.getMinQuantity()
-        },
+        // validateQuantity() {
+        //
+        //     if (!this.form.quantity) {
+        //         this.setMinQuantity()
+        //     }
+        //
+        //     if (isNaN(Number(this.form.quantity))) {
+        //         this.setMinQuantity()
+        //     }
+        //
+        //     if (typeof parseFloat(this.form.quantity) !== 'number') {
+        //         this.setMinQuantity()
+        //     }
+        //
+        //     if (this.form.quantity <= this.getMinQuantity()) {
+        //         this.setMinQuantity()
+        //     }
+        //
+        //     this.calculateTotal()
+        // },
+        // setMinQuantity() {
+        //     this.form.quantity = this.getMinQuantity()
+        // },
         getMinQuantity() {
             return 0.01
         },

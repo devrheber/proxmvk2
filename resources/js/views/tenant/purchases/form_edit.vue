@@ -417,8 +417,11 @@
                                         <td class="text-right">{{ currency_type.symbol }} {{ row.total_charge }}</td>
                                         <td class="text-right">{{ currency_type.symbol }} {{ row.total }}</td>
                                         <td class="text-right">
+                                            <button type="button" class="btn waves-effect waves-light btn-xs btn-primary"
+                                                @click.prevent="clickEditItem(index, row)">✎
+                                            </button>
                                             <button type="button" class="btn waves-effect waves-light btn-xs btn-danger"
-                                                    @click.prevent="clickRemoveItem(index)">x
+                                                @click.prevent="clickRemoveItem(index)">x
                                             </button>
                                         </td>
                                     </tr>
@@ -515,6 +518,7 @@
                             :exchange-rate-sale="form.exchange_rate_sale"
                             :localHasGlobalIgv="localHasGlobalIgv"
                             :percentage-igv="percentage_igv"
+                            :rowItem="rowItem"
                             @add="addRow"></purchase-form-item>
 
         <person-form :showDialog.sync="showDialogNewPerson"
@@ -583,7 +587,8 @@ export default {
             purchaseNewId: null,
             localHasGlobalIgv: false,
             warehouses: [],
-
+            rowItem: null,
+            rowIndex: -1,
         }
     },
     async created() {
@@ -1086,12 +1091,24 @@ export default {
             this.filterSuppliers()
         },
         addRow(row) {
-            this.form.items.push(row)
-            this.calculateTotal()
+            if (this.rowItem) {
+                this.form.items[this.rowIndex] = row
+                this.calculateTotal()
+                this.rowIndex = -1
+                this.rowItem = null
+            } else {
+                this.form.items.push(row)
+                this.calculateTotal()
+            }
         },
         clickRemoveItem(index) {
             this.form.items.splice(index, 1)
             this.calculateTotal()
+        },
+        clickEditItem(index, row) {
+            this.rowIndex = index
+            this.rowItem = this.form.items[index]
+            this.showDialogAddItem = true
         },
         changeCurrencyType() {
             this.currency_type = _.find(this.currency_types, {'id': this.form.currency_type_id})

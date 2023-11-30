@@ -510,6 +510,10 @@
                                                 Series
                                             </button>
 
+                                            <button class="btn waves-effect waves-light btn-xs btn-primary"
+                                                    type="button"
+                                                    @click.prevent="clickEditItem(index, row)">✎
+                                            </button>
                                             <button class="btn waves-effect waves-light btn-xs btn-danger"
                                                     type="button"
                                                     @click.prevent="clickRemoveItem(index)">x
@@ -664,6 +668,7 @@
                             :showDialog.sync="showDialogAddItem"
                             :localHasGlobalIgv="localHasGlobalIgv"
                             :percentage-igv="percentage_igv"
+                            :rowItem="rowItem"
                             @add="addRow"></purchase-form-item>
 
         <person-form :external="true"
@@ -1284,12 +1289,24 @@ export default {
             this.filterSuppliers()
         },
         addRow(row) {
-            this.form.items.push(row)
-            this.calculateTotal()
+            if (this.rowItem) {
+                this.form.items[this.rowIndex] = row
+                this.calculateTotal()
+                this.rowIndex = -1
+                this.rowItem = null
+            } else {
+                this.form.items.push(row)
+                this.calculateTotal()
+            }
         },
         clickRemoveItem(index) {
             this.form.items.splice(index, 1)
             this.calculateTotal()
+        },
+        clickEditItem(index, row) {
+            this.rowItem = this.form.items[index]
+            this.rowIndex = index
+            this.showDialogAddItem = true
         },
         changeCurrencyType() {
             this.currency_type = _.find(this.currency_types, {'id': this.form.currency_type_id})

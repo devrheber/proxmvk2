@@ -1,7 +1,8 @@
 <template>
     <el-dialog :title="titleDialog"
                :visible="showDialog"
-               @close="close">
+               @close="close"
+               @open="create">
         <Keypress
             :key-code="112"
             key-event="keyup"
@@ -543,7 +544,7 @@
                 <el-button @click.prevent="close()">Cerrar</el-button>
                 <el-button v-if="form.item_id"
                            native-type="submit"
-                           type="primary">Agregar
+                           type="primary">{{titleButton}}
                 </el-button>
             </div>
         </form>
@@ -592,7 +593,8 @@ export default {
         'currencyTypeIdActive',
         'exchangeRateSale',
         'localHasGlobalIgv',
-        'percentageIgv'
+        'percentageIgv',
+        'rowItem'
     ],
     components: {
         itemForm, 
@@ -692,6 +694,7 @@ export default {
             editors: {
                 classic: ClassicEditor
             },
+            titleButton: ''
         }
     },
     created() {
@@ -791,9 +794,16 @@ export default {
             this.items = this.items.filter(item => item.warehouses.length > 0)
             // this.items = this.items.filter(item => (item.warehouses!== undefined && item.warehouses.length >0))
         },
+        create() {
+            if (this.rowItem) {
+                this.form = this.rowItem
+            }
+            this.rowItem ? this.titleButton = 'Editar' : this.titleButton = 'Agregar'
+        },
         initForm() {
             this.errors = {}
             let warehouse = 1;
+            this.rowItem ? this.titleButton = 'Editar' : this.titleButton = 'Agregar'
             if (this.config !== undefined && this.config.warehouse_id !== undefined) {
                 warehouse = this.config.warehouse_id;
             }
