@@ -324,6 +324,7 @@
                                             </template>
 
                                             <td class="text-center">
+                                                <button type="button" class="btn waves-effect waves-light btn-xs btn-primary" @click.prevent="clickEditItem(row, index)"><span style="font-size: 10px;">✎</span></button>
                                                 <button type="button"
                                                         class="btn waves-effect waves-light btn-xs btn-danger"
                                                         @click.prevent="clickRemoveItem(index)">x
@@ -340,7 +341,7 @@
                             <div class="col-lg-12 col-md-6 d-flex align-items-end">
                                 <div class="form-group">
                                     <button type="button" class="btn waves-effect waves-light btn-primary"
-                                            @click.prevent="showDialogAddItem = true">+ Agregar Producto
+                                        @click.prevent="clickAddItem">+ Agregar Producto
                                     </button>
                                 </div>
                             </div>
@@ -388,6 +389,7 @@
                               :typeUser="typeUser"
                               :configuration="config"
                               :percentage-igv="percentage_igv"
+                              :recordItem="recordItem"
                               @add="addRow"></order-note-form-item>
 
         <person-form :showDialog.sync="showDialogNewPerson"
@@ -479,6 +481,7 @@ export default {
                 label: 'FORMA DE PAGO'
             }],
             payment_destinations: [],
+            recordItem: null
         }
     },
     created() {
@@ -556,6 +559,15 @@ export default {
         this.loading_form = true
     },
     methods: {
+        clickAddItem() {
+            this.recordItem = null
+            this.showDialogAddItem = true
+        },
+        clickEditItem(row, index) {
+            row.aux_index= index
+            this.recordItem = row
+            this.showDialogAddItem = true
+        },
         clickAddAdditionalData()
         {
             this.form.additional_data.push({
@@ -766,7 +778,14 @@ export default {
             this.customers = this.all_customers
         },
         addRow(row) {
-            this.form.items.push(JSON.parse(JSON.stringify(row)));
+            if (this.recordItem) {
+                this.form.items[this.recordItem.aux_index] = row
+                this.form.items[this.recordItem.aux_index].id = this.recordItem.record_id
+                this.form.items[this.recordItem.aux_index].record_id = this.recordItem.record_id
+                this.recordItem = null
+            } else {
+                this.form.items.push(JSON.parse(JSON.stringify(row)));
+            }
 
             this.calculateTotal();
         },

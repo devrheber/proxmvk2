@@ -30,7 +30,7 @@
                                         ref="selectSearchNormal"
                                         slot="prepend"
                                         v-model="form.item_id"
-                                        :disabled="recordItem != null"
+                                        :disabled="isUpdateItem"
                                         :loading="loading_search"
                                         :remote-method="searchRemoteItems"
                                         filterable
@@ -58,12 +58,13 @@
                                     </el-select>
                                     <el-tooltip
                                         slot="append"
-                                        :disabled="recordItem != null"
+                                        :disabled="isUpdateItem"
                                         class="item"
                                         content="Ver Stock del Producto"
                                         effect="dark"
                                         placement="bottom">
                                         <el-button
+                                            :disabled="isUpdateItem"
                                             @click.prevent="clickWarehouseDetail()">
                                             <i class="fa fa-search"></i>
                                         </el-button>
@@ -81,7 +82,7 @@
                              class="form-group">
                             <label class="control-label">Afectación Igv</label>
                             <el-select v-model="form.affectation_igv_type_id"
-                                       :disabled="!change_affectation_igv_type_id"
+                                       :disabled="!change_affectation_igv_type_id || isUpdateItem"
                                        filterable>
                                 <el-option v-for="option in affectation_igv_types"
                                            :key="option.id"
@@ -89,7 +90,7 @@
                                            :value="option.id"></el-option>
                             </el-select>
                             <el-checkbox v-model="change_affectation_igv_type_id"
-                                         :disabled="recordItem != null">
+                                         :disabled="isUpdateItem">
                                 Editar
                             </el-checkbox>
                             <small v-if="errors.affectation_igv_type_id"
@@ -196,7 +197,7 @@
                     </div>
                     <template v-if="!is_client">
 
-                        <div v-if="item_unit_types.length > 0"
+                        <div v-if="form.item_unit_types.length > 0"
                              class="col-md-12">
                             <div class="table-responsive"
                                  style="margin:3px">
@@ -223,7 +224,7 @@
                                     </tr>
                                     </thead>
                                     <tbody>
-                                    <tr v-for="(row, index) in item_unit_types"
+                                    <tr v-for="(row, index) in form.item_unit_types"
                                         :key="index">
                                         <td class="text-center">{{ row.unit_type_id }}</td>
                                         <td class="text-center">{{ row.description }}</td>
@@ -262,7 +263,7 @@
                         </div>-->
                         <div class="col-md-12 mt-2">
                             <el-collapse v-model="activePanel">
-                                <el-collapse-item :disabled="recordItem != null"
+                                <el-collapse-item :disabled="isUpdateItem"
                                                   name="1"
                                                   title="+ Agregar Descuentos/Cargos/Atributos especiales">
                                     <div v-if="discount_types.length > 0">
@@ -459,6 +460,7 @@
             :lots_group="form.lots_group"
             :quantity="form.quantity"
             :showDialog.sync="showDialogLots"
+            :isUpdateItem="isUpdateItem"
             @addRowLotGroup="addRowLotGroup">
         </lots-group>
 
@@ -494,7 +496,6 @@ export default {
         'typeUser',
         'configuration',
         'percentageIgv',
-        'recordItem'
     ],
     components: {ItemForm, WarehousesDetail, LotsGroup, SelectLotsForm, 'vue-ckeditor': VueCkeditor.component},
 
@@ -548,8 +549,6 @@ export default {
     },
     mounted() {
         this.getTables()
-
-
         this.$eventHub.$on('reloadDataItems', (item_id) => {
             this.reloadDataItems(item_id)
         })
@@ -564,7 +563,9 @@ export default {
         ...mapState([
             'config',
         ]),
-
+        isUpdateItem() {
+            return !_.isEmpty(this.recordItem)
+        },
         showLots() {
 
             if (this.form.item_id && this.form.item.lots_enabled) {
@@ -640,13 +641,18 @@ export default {
         },
         getTables() {
             this.$http.get(`/${this.resource}/item/tables`).then(response => {
-                this.items = response.data.items
-                this.affectation_igv_types = response.data.affectation_igv_types
-                this.system_isc_types = response.data.system_isc_types
-                this.discount_types = response.data.discount_types
-                this.charge_types = response.data.charge_types
-                this.attribute_types = response.data.attribute_types
-                // this.filterItems()
+                let data = response.data
+                this.all_items = data.items
+                // this.items =data.items
+                this.operation_types = data.operation_types
+                this.all_affectation_igv_types = data.affectation_igv_types
+                this.affectation_igv_types = data.affectation_igv_types
+                this.system_isc_types = data.system_isc_types
+                this.discount_types = data.discount_types
+                this.charge_types = data.charge_types
+                this.attribute_types = data.attribute_types
+                this.is_client = data.is_client
+                this.filterItems()
 
             })
         },
@@ -824,6 +830,24 @@ export default {
                 document_item_id: null,
                 name_product_pdf: '',
                 calculate_quantity: false,
+                item_id: null,
+                item: {},
+                affectation_igv_type_id: null,
+                affectation_igv_type: {},
+                has_isc: false,
+                system_isc_type_id: null,
+                percentage_isc: 0,
+                suggested_price: 0,
+                quantity: 1,
+                unit_price: 0,
+                unit_price_value: 0,
+                input_unit_price: 0,
+                input_unit_price_value: 0,
+                charges: [],
+                discounts: [],
+                attributes: [],
+                sale_note_item_id: null,
+                record_id: null,
             };
 
             this.activePanel = 0;
@@ -846,55 +870,85 @@ export default {
                 }
             }
 
-            if (this.recordItem) {
-                // this.form = this.recordItem
-                await this.reloadDataItems(this.recordItem.item_id)
-                this.form.item_id = await this.recordItem.item_id
-                // await this.changeItem()
-                this.form.quantity = this.recordItem.quantity
-                this.form.unit_price_value = this.recordItem.input_unit_price_value
-                this.form.has_plastic_bag_taxes = (this.recordItem.total_plastic_bag_taxes > 0) ? true : false
-                this.form.warehouse_id = this.recordItem.warehouse_id
-                this.isUpdateWarehouseId = this.recordItem.warehouse_id
+            this.updateItem()
 
-                if (this.isEditItemNote) {
-                    this.form.item.currency_type_id = this.currencyTypeIdActive
-                    this.form.item.currency_type_symbol = (this.currencyTypeIdActive == 'PEN') ? 'S/' : '$'
+            // if (this.recordItem) {
+            //     // this.form = this.recordItem
+            //     // await this.reloadDataItems(this.recordItem.item_id)
+            //     this.form.item_id = await this.recordItem.item_id
+            //     await this.changeItem()
+            //     this.form.quantity = this.recordItem.quantity
+            //     this.form.unit_price_value = this.recordItem.input_unit_price_value
+            //     this.form.has_plastic_bag_taxes = (this.recordItem.total_plastic_bag_taxes > 0) ? true : false
+            //     this.form.warehouse_id = this.recordItem.warehouse_id
+            //     this.isUpdateWarehouseId = this.recordItem.warehouse_id
 
-                    if (this.documentTypeId == '07' && this.noteCreditOrDebitTypeId == '07') {
+            //     if (this.isEditItemNote) {
+            //         this.form.item.currency_type_id = this.currencyTypeIdActive
+            //         this.form.item.currency_type_symbol = (this.currencyTypeIdActive == 'PEN') ? 'S/' : '$'
 
-                        this.form.document_item_id = this.recordItem.id ? this.recordItem.id : this.recordItem.document_item_id
-                        this.form.item.lots = this.recordItem.item.lots
-                        await this.regularizeLots()
-                        this.lots = this.form.item.lots
-                    }
+            //         if (this.documentTypeId == '07' && this.noteCreditOrDebitTypeId == '07') {
 
-                }
+            //             this.form.document_item_id = this.recordItem.id ? this.recordItem.id : this.recordItem.document_item_id
+            //             this.form.item.lots = this.recordItem.item.lots
+            //             await this.regularizeLots()
+            //             this.lots = this.form.item.lots
+            //         }
 
-                if (this.recordItem.item.name_product_pdf) {
-                    this.form.name_product_pdf = this.recordItem.item.name_product_pdf
-                }
-                // if(this.recordItem.name_product_pdf){
-                //     this.form.name_product_pdf = this.recordItem.name_product_pdf
-                // }
+            //     }
 
-                if(this.recordItem.item.change_free_affectation_igv){
+            //     if (this.recordItem.item.name_product_pdf) {
+            //         this.form.name_product_pdf = this.recordItem.item.name_product_pdf
+            //     }
+            //     // if(this.recordItem.name_product_pdf){
+            //     //     this.form.name_product_pdf = this.recordItem.name_product_pdf
+            //     // }
 
-                    this.form.affectation_igv_type_id = '15'
-                    this.form.item.change_free_affectation_igv = true
+            //     if(this.recordItem.item.change_free_affectation_igv){
 
-                }else{
-                    if(this.recordItem.item.original_affectation_igv_type_id){
-                        this.form.affectation_igv_type_id = this.recordItem.item.original_affectation_igv_type_id
-                    }
-                }
-                // this.calculateQuantity()
-            } else {
-                this.isUpdateWarehouseId = null
-            }
+            //         this.form.affectation_igv_type_id = '15'
+            //         this.form.item.change_free_affectation_igv = true
+
+            //     }else{
+            //         if(this.recordItem.item.original_affectation_igv_type_id){
+            //             this.form.affectation_igv_type_id = this.recordItem.item.original_affectation_igv_type_id
+            //         }
+            //     }
+            //     // this.calculateQuantity()
+            // } else {
+            //     this.isUpdateWarehouseId = null
+            // }
             this.$refs.selectSearchNormal.$el.getElementsByTagName('input')[0].focus()
 
             //     this.initializeFields()
+        },
+        setUnitPriceValue(){
+            if(this.recordItem.item.has_igv) {
+                this.form.unit_price = this.recordItem.input_unit_price_value ? this.recordItem.input_unit_price_value : this.recordItem.unit_price
+            } else {
+                this.form.unit_price = this.recordItem.input_unit_price_value ? this.recordItem.input_unit_price_value : this.recordItem.unit_value
+            }
+        },
+        async updateItem() {
+            if (this.isUpdateItem) {
+                await this.reloadDataItems(this.recordItem.item_id)
+
+                this.form.quantity = parseFloat(this.recordItem.quantity)
+                this.setUnitPriceValue()
+                this.form.has_plastic_bag_taxes = (this.recordItem.total_plastic_bag_taxes > 0) ? true : false
+                this.form.warehouse_id = this.recordItem.warehouse_id
+                this.isUpdateWarehouseId = this.recordItem.warehouse_id
+                this.form.record_id = this.recordItem.record_id
+                this.form.affectation_igv_type_id = this.recordItem.affectation_igv_type_id
+
+                // this.setIdLoteSelected()
+                // this.setItemLots()
+                // this.setPresentationEditItem()
+                // this.setNameProductPdf()
+                this.calculateQuantity()
+            } else {
+                this.isUpdateWarehouseId = null
+            }
         },
         async regularizeLots() {
 
@@ -986,15 +1040,16 @@ export default {
         },
         async changeItem()
         {
-            this.getItems()
-
-            this.form.item = _.find(this.items, {'id': this.form.item_id});
+            this.form.item = { ..._.find(this.items, {'id': this.form.item_id}) }
+            this.form.item_unit_types = _.find(this.items, {'id': this.form.item_id}).item_unit_types
             this.form.unit_price = this.form.item.sale_unit_price;
-            this.form.unit_price_value = this.form.item.sale_unit_price;
             this.lots = this.form.item.lots;
             this.form.has_igv = this.form.item.has_igv;
             this.form.affectation_igv_type_id = this.form.item.sale_affectation_igv_type_id;
-            this.form.quantity = this.recordItem.quantity ? this.recordItem.quantity : 1;
+            if (this.recordItem !== undefined && this.recordItem !== null) {
+                this.form.quantity = this.recordItem.quantity ? this.recordItem.quantity : 1;
+            }
+            
             this.item_unit_types = this.form.item.item_unit_types;
             (this.item_unit_types.length > 0) ? this.has_list_prices = true : this.has_list_prices = false;
             this.form.lots_group = this.form.item.lots_group
@@ -1031,16 +1086,32 @@ export default {
                 this.total_item = this.form.unit_price_value
             }
         },
-        reloadDataItems(item_id) {
-            this.$http.get(`/${this.resource}/table/items`).then((response) => {
-                this.items = response.data
-                this.form.item_id = item_id
-                if (item_id) {
+        async reloadDataItems(item_id) {
+            if (!item_id) {
+                await this.$http.get(`/${this.resource}/table/items`).then((response) => {
+                    this.items = response.data
+                    this.form.item_id = item_id
+                    // if(item_id) this.changeItem()
+                    // this.filterItems()
+                })
+            } else {
+                await this.$http.get(`/${this.resource}/search/item/${item_id}`).then((response) => {
+                    // this.items = response.data
+                    this.items = response.data.items
+                    this.form.item_id = item_id
                     this.changeItem()
-                }
-                // this.filterItems()
 
-            })
+                })
+            }
+            // this.$http.get(`/${this.resource}/table/items`).then((response) => {
+            //     this.items = response.data
+            //     this.form.item_id = item_id
+            //     if (item_id) {
+            //         this.changeItem()
+            //     }
+            //     // this.filterItems()
+
+            // })
         },
 
         calculateTotal() {
@@ -1074,22 +1145,48 @@ export default {
             if (this.validateTotalItem().total_item) return;
 
             // this.form.item.unit_price = this.form.unit_price;
-            let unit_price = (this.form.has_igv) ? this.form.unit_price : this.form.unit_price * (1 + this.percentageIgv);
+            // let unit_price = (this.form.has_igv) ? this.form.unit_price : this.form.unit_price * (1 + this.percentageIgv);
+            let affectation_igv_type_id = this.form.affectation_igv_type_id
+            let unit_price = this.form.unit_price;
+            
+            if (this.form.has_igv === false) {
+                if(
+                    affectation_igv_type_id === "20" ||
+                    affectation_igv_type_id === "21" ||
+                    affectation_igv_type_id === "40"
+                ){
+                    // do nothing
+                    // exonerado de igv
+                }else{
+                    unit_price = this.form.unit_price * (1 + this.percentageIgv);
 
-            // this.form.item.unit_price = this.form.unit_price
+                }
+            }
+
+            this.form.input_unit_price_value = this.form.unit_price;
+
             this.form.unit_price = unit_price;
             this.form.item.unit_price = unit_price;
-
             this.form.item.presentation = this.item_unit_type;
-            this.form.affectation_igv_type = _.find(this.affectation_igv_types, {'id': this.form.affectation_igv_type_id});
+            this.form.affectation_igv_type = _.find(this.affectation_igv_types, {'id': affectation_igv_type_id});
             let IdLoteSelected = this.form.IdLoteSelected
             this.row = calculateRowItem(this.form, this.currencyTypeIdActive, this.exchangeRateSale, this.percentageIgv);
             this.row.IdLoteSelected = IdLoteSelected
             this.initForm();
 
+            // if (this.recordItem) this.row.aux_index = this.recordItem.aux_index
+
             // this.initializeFields()
             this.$emit('add', this.row);
+            // this.recordItem = null
+            this.item_unit_types = []
             this.setFocusSelectItem()
+
+            if (this.recordItem) {
+                this.close();
+            } else {
+                this.setFocusSelectItem();
+            }
         },
         cleanItems() {
             this.items = []

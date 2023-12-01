@@ -244,7 +244,7 @@
                             </div>
                             <div class="col-lg-12 col-md-6 d-flex align-items-end">
                                 <div class="form-group">
-                                    <button type="button" class="btn waves-effect waves-light btn-primary" @click.prevent="showDialogAddItem = true">+ Agregar Producto</button>
+                                    <button type="button" class="btn waves-effect waves-light btn-primary" @click.prevent="clickAddItem">+ Agregar Producto</button>
                                 </div>
                             </div>
 
@@ -381,6 +381,10 @@
         },
         methods:
         {
+            clickAddItem() {
+                this.recordItem = null
+                this.showDialogAddItem = true
+            },
             clickEditItem(row, index) {
                 row.aux_index= index
                 this.recordItem = row

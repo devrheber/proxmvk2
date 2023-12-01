@@ -900,7 +900,7 @@ export default {
         //     this.form.affectation_igv_type_id = this.affectation_igv_types[0].id
         // },
         async create() {
-
+            this.items = this.all_items
             this.titleDialog = (this.isUpdateItem) ? ' Editar Producto o Servicio' : ' Agregar Producto o Servicio';
             this.titleAction = (this.isUpdateItem) ? ' Editar' : ' Agregar';
             if(this.operation_types !== undefined) {
@@ -1002,7 +1002,6 @@ export default {
 
         },
         async updateItem(){
-
             if (this.isUpdateItem)
             {
                 await this.reloadDataItems(this.recordItem.item_id)
@@ -1324,9 +1323,7 @@ export default {
             return this.errors
         },
         async reloadDataItems(item_id) {
-
             if (!item_id) {
-
                 await this.$http.get(`/${this.resource}/table/items`).then((response) => {
                     this.items = response.data
                     this.form.item_id = item_id
@@ -1335,7 +1332,6 @@ export default {
                 })
 
             } else {
-
                 await this.$http.get(`/${this.resource}/search/item/${item_id}`).then((response) => {
 
                     this.items = response.data
